@@ -1,0 +1,57 @@
+name: CI-SFTP
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ master ]
+#  pull_request:
+#    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "SFTP"
+  deploy-via-sftp:
+    runs-on: self-hosted
+    steps:
+    
+      - name: Sql insertion
+        run: 
+           D:\sqlcheck.ps1
+      - uses: actions/checkout@v2
+      - uses: actions/setup-java@v1
+        with:
+          distribution: 'zulu'
+          java-version: '12.x'
+      - name: Cache SonarQube packages
+        uses: actions/cache@v1
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar'
+      - name: Setup sonarqube
+        uses: warchant/setup-sonar-scanner@v3
+      - name: Run sonarqube
+        run: sonar-scanner
+          
+      - name: SFTP Deploy
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.1
+        with:
+          username: ubuntu
+          server: ec2-3-110-142-139.ap-south-1.compute.amazonaws.com
+          port: 22 # default is 22
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+          
+          # will put all file under this path
+          local_path: ./* # default is ./*
+          # files will copy to under remote_path
+          remote_path: /var/www/html/
+          
+      #- run: pm2 reload all
+          
+          # sftp args
+          args: '-o ConnectTimeout=5'
